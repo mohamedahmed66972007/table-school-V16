@@ -3,6 +3,19 @@ import express2 from "express";
 
 // server/routes.ts
 import { createServer } from "http";
+{
+  "name": "table-school",
+  "version": "1.0.0",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "pkg": {
+    "assets": ["public/**/*", "views/**/*"], 
+    "targets": ["node18-win-x64"]
+  }
+}
 
 // server/storage.ts
 import { randomUUID } from "crypto";
