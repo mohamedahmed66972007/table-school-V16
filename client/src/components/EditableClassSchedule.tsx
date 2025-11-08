@@ -34,16 +34,36 @@ export function EditableClassSchedule({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  // 🧩 تعديل: حفظ فقط التغييرات
   const saveSlotsMutation = useMutation({
     mutationFn: async (changedSlots: { day: Day; period: Period; teacherId: string }[]) => {
+      // بناء الحصص الكاملة بناءً على التغييرات الحالية
+      const fullSlots: any[] = [];
+      
+      DAYS.forEach((day) => {
+        PERIODS.forEach((period) => {
+          const teacherId = getTeacherForSlot(day, period);
+          if (teacherId) {
+            fullSlots.push({
+              teacherId,
+              day,
+              period,
+              grade,
+              section,
+            });
+          }
+        });
+      });
+
       const response = await fetch(`/api/class-schedules/${grade}/${section}`, {
-        method: "PATCH", // استخدم PATCH بدل POST لو API يسمح
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ slots: changedSlots, isPartial: true }),
+        body: JSON.stringify({ slots: fullSlots }),
       });
-      if (!response.ok) throw new Error("Failed to save schedule changes");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to save schedule changes");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -52,7 +72,7 @@ export function EditableClassSchedule({
       setEditedSlots(new Map());
       toast({
         title: "تم الحفظ",
-        description: "تم حفظ التغييرات بنجاح دون التأثير على باقي الصفوف",
+        description: "تم حفظ التغييرات بنجاح",
       });
     },
     onError: () => {
@@ -126,19 +146,12 @@ export function EditableClassSchedule({
       return;
     }
 
-    // 🧩 بناء مصفوفة بالتغييرات فقط
-    const changedSlots: { day: Day; period: Period; teacherId: string }[] = [];
-    editedSlots.forEach((teacherId, key) => {
-      const [day, period] = key.split("-") as [Day, Period];
-      changedSlots.push({ day, period, teacherId });
-    });
-
-    if (changedSlots.length === 0) {
+    if (editedSlots.size === 0) {
       toast({ title: "لا توجد تغييرات", description: "لم يتم تعديل أي حصة." });
       return;
     }
 
-    saveSlotsMutation.mutate(changedSlots);
+    saveSlotsMutation.mutate([]);
   };
 
   const conflicts = detectConflicts();

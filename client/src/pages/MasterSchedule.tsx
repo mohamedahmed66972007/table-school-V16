@@ -341,16 +341,11 @@ export default function MasterSchedule() {
         throw new Error(`أخطاء في البيانات:\n${validationErrors.join("\n")}`);
       }
 
-      // Only now delete all existing slots (after validation)
-      await apiRequest("/api/schedule-slots", { method: "DELETE" });
-
-      // Create new slots
-      for (const slot of allSlots) {
-        await apiRequest("/api/schedule-slots", {
-          method: "POST",
-          body: JSON.stringify(slot),
-        });
-      }
+      // استخدام batch API لحفظ جميع الحصص دفعة واحدة
+      await apiRequest("/api/schedule-slots/batch", {
+        method: "POST",
+        body: JSON.stringify({ slots: allSlots }),
+      });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/schedule-slots"] });
