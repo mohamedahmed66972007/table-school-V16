@@ -153,6 +153,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Batch save all schedule slots (faster than individual saves)
+  app.post("/api/schedule-slots/batch", async (req, res) => {
+    try {
+      const { slots } = req.body;
+      if (!Array.isArray(slots)) {
+        return res.status(400).json({ error: "Slots must be an array" });
+      }
+
+      // Validate all slots first
+      for (const slotData of slots) {
+        insertScheduleSlotSchema.parse(slotData);
+      }
+
+      // Delete all existing slots
+      await storage.deleteAllScheduleSlots();
+
+      // Create new slots
+      const createdSlots = [];
+      for (const slotData of slots) {
+        const slot = await storage.createScheduleSlot(slotData);
+        createdSlots.push(slot);
+      }
+
+      res.status(201).json(createdSlots);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ error: "Invalid data", details: error.errors });
+      }
+      console.error("Error batch saving schedule slots:", error);
+      res.status(500).json({ error: "Failed to batch save schedule slots" });
+    }
+  });
+
   // Batch operations for schedule slots
   app.post("/api/teachers/:teacherId/schedule-slots/batch", async (req, res) => {
     try {
