@@ -1,0 +1,33 @@
+name: Build Node.js EXE
+
+on:
+  push:
+    branches: [ main ]  # أو أي فرع
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install pkg
+        run: npm install -g pkg
+
+      - name: Build EXE
+        run: pkg . --targets node18-win-x64 --output dist/app.exe
+
+      - name: Upload EXE as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-exe
+          path: dist/app.exe
