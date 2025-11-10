@@ -33,8 +33,6 @@ export default function TeacherSchedule() {
   const [showEditDialog, setShowEditDialog] = useState(false);
 
   const [scheduleData, setScheduleData] = useState<Record<string, Record<number, string>>>({});
-  const [isInitialized, setIsInitialized] = useState(false);
-
 
   const { data: teacher, isLoading: teacherLoading } = useQuery<Teacher>({
     queryKey: [`/api/teachers/${teacherId || id}`],
@@ -46,9 +44,8 @@ export default function TeacherSchedule() {
     enabled: !!teacherId || !!id,
   });
 
-  // This useEffect is intended to process teacherSlots and initialize scheduleData
   useEffect(() => {
-    if (teacherSlots && teacherSlots.length > 0 && !isInitialized) {
+    if (teacherSlots && teacherSlots.length > 0) {
       const initialSchedule: Record<string, Record<number, string>> = {};
       const formattedSlots: ScheduleSlotData[] = teacherSlots.map(slot => {
         if (!initialSchedule[slot.day]) {
@@ -64,12 +61,11 @@ export default function TeacherSchedule() {
       });
       setScheduleData(initialSchedule);
       setSlots(formattedSlots);
-      setIsInitialized(true);
-    } else if (teacherSlots && teacherSlots.length === 0 && !isInitialized) {
-      // Handle case where teacher has no slots yet, to ensure isInitialized is set
-      setIsInitialized(true);
+    } else if (teacherSlots && teacherSlots.length === 0) {
+      setScheduleData({});
+      setSlots([]);
     }
-  }, [teacherSlots, isInitialized]);
+  }, [teacherSlots]);
 
 
   const updateTeacherInfoMutation = useMutation({

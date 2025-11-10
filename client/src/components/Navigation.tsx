@@ -1,6 +1,7 @@
 import { BookOpen, Settings, Users, Table } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "./ui/button";
+import { ThemeToggle } from "./ui/theme-toggle";
 
 export default function Navigation() {
   const [location] = useLocation();
@@ -39,6 +40,7 @@ export default function Navigation() {
                 </Link>
               );
             })}
+            <ThemeToggle />
           </div>
         </div>
       </div>
