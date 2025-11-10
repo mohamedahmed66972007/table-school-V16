@@ -39,16 +39,20 @@
   - حوار تخصيص لاختيار الخطوط والألوان
   - **دمج الحصص المتتالية**: إذا كان معلم/مادة واحد في حصتين متتاليتين بنفس اليوم، يتم دمج الخلايا
 - **عرض الجداول**: مع/بدون أسماء المعلمين
-- **الواجهة**: RTL كامل، ثيم داكن، رسوم متحركة سلسة، خطوط عربية متعددة
+- **الواجهة**: RTL كامل، دعم الثيم الليلي والنهاري مع زر تبديل، رسوم متحركة سلسة، خطوط عربية متعددة
   - تصميم جدول محسّن بمسافات واضحة بين الخلايا (4px)
   - تأثيرات hover ناعمة بدون حواف غامقة
   - الصفحة الرئيسية توجّه مباشرة إلى الجدول الرئيسي
+  - زر تبديل الوضع الليلي/النهاري في شريط التنقل
+  - نظام ألوان محسّن للمواد يعمل بشكل واضح في كلا الوضعين (الليلي والنهاري)
+  - الوضع الافتراضي: light mode مع localStorage key "school-schedule-theme"
 
 ## البنية التقنية
 
 ### Backend
 - **Framework**: Express.js
-- **التخزين**: In-memory (MemStorage)
+- **قاعدة البيانات**: PostgreSQL (Neon) مع Drizzle ORM
+- **التخزين**: DatabaseStorage - تخزين دائم في قاعدة البيانات
 - **API**: RESTful endpoints لجميع عمليات CRUD
 - **المنفذ**: 5000 (frontend و backend على نفس المنفذ)
 - **المضيف**: 0.0.0.0
@@ -59,14 +63,17 @@
 - **State Management**: TanStack Query (v5)
 - **UI Components**: Shadcn/ui + Radix UI
 - **Styling**: Tailwind CSS
+- **Theme**: دعم الوضع الليلي والنهاري باستخدام next-themes
 - **PDF**: jsPDF + jsPDF-autotable
+- **Excel**: ExcelJS لاستيراد وتصدير الملفات
 - **Dev Server**: Vite integrated with Express
 
 ### الملفات الرئيسية
 - `shared/schema.ts`: تعريفات الأنواع والثوابت وجداول Drizzle
-- `server/storage.ts`: واجهة التخزين وتنفيذ MemStorage
+- `server/db.ts`: إعداد اتصال قاعدة البيانات PostgreSQL
+- `server/storage.ts`: واجهة التخزين وتنفيذ DatabaseStorage
 - `server/routes.ts`: API routes
-- `server/index.ts`: Express server setup
+- `server/index.ts`: Express server setup مع تهيئة قاعدة البيانات
 - `server/vite.ts`: Vite dev server integration
 - `client/src/lib/pdfGenerator.ts`: منطق تصدير PDF
 - `client/src/lib/excelGenerator.ts`: منطق تصدير Excel (يستخدم القالب الجديد)
@@ -118,7 +125,10 @@
 - **Conflict Detection**: API يمنع حفظ جدول يحتوي على تعارضات (حصتان في نفس الوقت والصف)
 - **Section Validation**: المعلم والجدول الرئيسي يتحققان من وجود الشعب قبل الحفظ
   - رسائل الخطأ التفصيلية تظهر للمستخدم عبر error.message في toast
-- **React State Management**: handleDeleteSlot ينشئ object جديد بالكامل لضمان re-render فوري
+- **React State Management**: 
+  - handleDeleteSlot ينشئ object جديد بالكامل لضمان re-render فوري
+  - إصلاح مشكلة عدم ظهور الحصص عند فتح صفحة تعديل الأستاذ بعد استيراد Excel مباشرة
+  - إزالة isInitialized flag لضمان تحديث البيانات عند كل تغيير في teacherSlots
 - **Teacher Sorting & Grouping**: 
   - ترتيب مخصص للمواد: إسلامية، عربي، إنجليزي، رياضيات، كيمياء، فيزياء، أحياء، اجتماعيات، حاسوب، بدنية، فنية
   - يتم تجميع المعلمين في صفحة Teachers حسب المادة في grid واحد لكل مادة
@@ -136,12 +146,23 @@
   - قراءة الحصص من الأعمدة 3-37 (الخميس→الأحد، الحصص 7→1)
   - كشف التعارضات تلقائياً مع خيارين: إصلاح أو المتابعة على أي حال
   - حفظ جميع المعلمين حتى الذين بدون حصص
+- **Database Persistence**:
+  - استخدام PostgreSQL لحفظ البيانات بشكل دائم
+  - جميع البيانات محفوظة عبر إعادة التشغيل (حل مشكلة فقدان الإعدادات على Render)
+  - تهيئة تلقائية للبيانات الافتراضية عند أول تشغيل
+  - دعم cascade delete للحصص عند حذف معلم
 - **Master Schedule PDF**:
   - تخطيط RTL: الأعمدة من اليمين لليسار (ملاحظات، الأيام، عدد الحصص، المادة، الاسم، م)
   - الأيام معكوسة: الخميس إلى الأحد
   - الحصص معكوسة: 7 إلى 1
   - توسيط الجدول في الصفحة باستخدام حساب leftMargin
   - صف عناوين الأيام مدمج مع صف أرقام الحصص
+- **Theme System**:
+  - استخدام next-themes لإدارة الوضع الليلي والنهاري
+  - Script في client/index.html لتطبيق التيم قبل تحميل الصفحة (منع FOUC)
+  - localStorage يحفظ اختيار المستخدم تلقائياً
+  - ألوان المواد محسّنة مع dark: variants لـ Tailwind CSS
+  - نصوص واضحة في كلا الوضعين (غامق للنهاري، فاتح لليلي)
 
 ## التشغيل
 
@@ -159,12 +180,17 @@ npm run start  # تشغيل النسخة المنتجة
 ```
 
 ### النشر (Deployment)
-تم إعداد التطبيق للنشر على Replit:
-- **نوع النشر**: Autoscale (للتطبيقات الثابتة stateless)
-- **البناء**: `npm run build`
-- **التشغيل**: `npm run start`
+تم إعداد التطبيق للنشر على **Render**:
+- راجع ملف `RENDER_DEPLOYMENT.md` للتعليمات الكاملة
+- **متطلبات**:
+  - قاعدة بيانات PostgreSQL على Render
+  - متغيرات البيئة: `DATABASE_URL`, `NODE_ENV=production`
+- **أوامر البناء**: `npm install && npm run db:push && npm run build`
+- **أمر التشغيل**: `npm run start`
+- **ملف المثال**: `.env.example` يحتوي على قائمة المتغيرات المطلوبة
 
-## إعدادات Replit المهمة
-- تم تكوين Vite لقبول جميع المضيفين (allowedHosts: true) للعمل مع Replit proxy
+## إعدادات مهمة
+- تم تكوين Vite لقبول جميع المضيفين (allowedHosts: true)
 - HMR (Hot Module Replacement) يعمل عبر منفذ 443
 - الخادم يعمل على 0.0.0.0:5000
+- التطبيق جاهز للنشر على Render أو أي منصة تدعم Node.js و PostgreSQL
